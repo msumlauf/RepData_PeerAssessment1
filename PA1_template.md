@@ -1,30 +1,15 @@
-# Reproducible Research: Peer Assessment 1
+---
+title: "Reproducible Research: Peer Assessment 1"
+output: 
+  html_document:
+    keep_md: true
+---
 
 Supplemental packages must be loaded before we begin.
 
 
 ```r
 library(dplyr)
-```
-
-```
-## 
-## Attaching package: 'dplyr'
-```
-
-```
-## The following objects are masked from 'package:stats':
-## 
-##     filter, lag
-```
-
-```
-## The following objects are masked from 'package:base':
-## 
-##     intersect, setdiff, setequal, union
-```
-
-```r
 library(lubridate)
 library(ggplot2)
 ```
@@ -107,7 +92,7 @@ hist(act_sum$totalsteps,
     )
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-4-1.png)
+![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-4-1.png)
 
 Finally, I calculate and store the mean and median number of steps taken per day, again ignoring the NA values (i.e., excluding them rather than treating them as zeroes).
 
@@ -160,7 +145,7 @@ with(act_pat,
     )
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-7-1.png)
+![plot of chunk unnamed-chunk-7](figure/unnamed-chunk-7-1.png)
 
 Finally, I find the interval with the highest average daily steps.
 
@@ -246,7 +231,7 @@ hist(act_fix_sum$totalsteps,
     )
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-11-1.png)
+![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11-1.png)
 
 Finally, I calculate and store the mean and median number of steps taken per day.
 
@@ -310,6 +295,6 @@ ggplot(data=act_pat, aes(x=interval, y=meansteps)) +
   theme_grey()
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-14-1.png)
+![plot of chunk unnamed-chunk-14](figure/unnamed-chunk-14-1.png)
 
 Certain differences are evident between weekend days and weekdays.  The peak at interval **835** appears in the weekday series but does not appear on weekends.  Weekend activity begins and ends later and tends to remain at a higher sustained level throughout the active portion of the day.
