@@ -5,21 +5,166 @@ output:
     keep_md: true
 ---
 
+Supplemental packages must be loaded before we begin.
+
+```{r, results=FALSE, warning=FALSE}
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+```
 
 ## Loading and preprocessing the data
 
+The contents of the [*zipped personal activity dataset*](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip) are read into a data frame called *activity*. The dataset is assumed to reside in the current working directory. The **date** field is then reformatted as POSIXct, and I examine the structure and contents of the data frame.
 
+```{r, echo=TRUE}
+activity <- read.csv(unzip("activity.zip"), stringsAsFactors=FALSE)
+activity$date <- ymd(activity$date)
+
+str(activity)
+head(activity)
+```
 
 ## What is mean total number of steps taken per day?
 
+First, I calculate the total number of steps taken by the subject in each day, store the result in a data frame called *act_sum*, and print the first few lines. Note that some days contain only NA values.
 
+```{r, echo=TRUE}
+act_sum <- activity %>%
+           group_by(date) %>%
+           summarize(totalsteps=sum(steps))
+act_sum
+```
+
+Then I generate a histogram showing how the sample is distributed by total number of steps taken per day. NA values are ignored.
+
+```{r, echo=TRUE}
+hist(act_sum$totalsteps,
+     breaks=10,
+     xlim=c(0,25000),
+     ylim=c(0,25),
+     main="",
+     col="blue",
+     xlab="Total Steps per Day",
+     ylab="Number of Days"
+    )
+```
+
+Finally, I calculate and store the mean and median number of steps taken per day, again ignoring the NA values (i.e., excluding them rather than treating them as zeroes).
+
+```{r, echo=TRUE}
+mean_steps = mean(act_sum$totalsteps, na.rm=TRUE)
+median_steps = median(act_sum$totalsteps, na.rm=TRUE)
+```
+
+The mean daily number of steps is **`r formatC(mean_steps, format='f', big.mark=',', digits=2)`**  
+The median daily number of steps is **`r formatC(median_steps, format='d', big.mark=',')`**
 
 ## What is the average daily activity pattern?
 
+First, I calculate the average number of steps taken within each five-minute time interval across days in the sample.
 
+```{r, echo=TRUE}
+act_pat <- activity %>%
+           group_by(interval) %>%
+           summarize(meansteps=mean(steps,na.rm=TRUE))
+head(act_pat)
+```
+
+Next, I generate a time-series plot showing how the average number of steps changes throughout the day.
+
+```{r, echo=TRUE}
+with(act_pat,
+     plot(interval, meansteps,
+          type="l",
+          col=c("blue"),
+          main="",
+          xlab="Interval",
+          ylab="Daily Average Steps"
+         )
+    )
+```
+
+Finally, I find the interval with the highest average daily steps.
+
+```{r, echo=TRUE}
+maxint <- act_pat[which(act_pat$meansteps==max(act_pat$meansteps)),]$interval
+```
+
+The interval labelled **`r maxint`** has the highest average step count.
 
 ## Imputing missing values
 
+```{r, echo=TRUE}
+nmiss <- nrow(activity[is.na(activity$steps),])
+```
 
+The *activity* dataset contains **`r formatC(nmiss, format='d', big.mark=',')`** observations with missing step counts.
+
+I will replace missing values with the mean value for the corresponding interval and store the result in a dataset called *act_fix*.
+
+```{r, echo=TRUE}
+act_fix <- activity %>%
+           left_join(act_pat, by="interval") %>%
+           mutate(steps = ifelse(is.na(steps), meansteps, steps)) %>%
+           select(-meansteps)
+head(act_fix)
+nmiss <- nrow(act_fix[is.na(act_fix$steps),])
+```
+The *act_fix* dataset contains **`r formatC(nmiss, format='d', big.mark=',')`** missing observations.
+
+Now I generate a histogram showing how the sample is distributed by the total number of steps taken per day, after imputation.
+
+```{r, echo=TRUE}
+act_fix_sum <- act_fix %>%
+               group_by(date) %>%
+               summarize(totalsteps=sum(steps))
+act_fix_sum
+hist(act_fix_sum$totalsteps,
+     breaks=10,
+     xlim=c(0,25000),
+     ylim=c(0,25),
+     main="",
+     col="red",
+     xlab="Total Steps per Day",
+     ylab="Number of Days"
+    )
+```
+
+Finally, I calculate and store the mean and median number of steps taken per day.
+
+```{r, echo=TRUE}
+mean_fix_steps = mean(act_fix_sum$totalsteps)
+median_fix_steps = median(act_fix_sum$totalsteps)
+```
+
+The mean daily number of steps after imputation is **`r formatC(mean_fix_steps, format='f', big.mark=',', digits=2)`**  
+The median daily number of steps after imputation is **`r formatC(median_fix_steps, format='d', big.mark=',')`**
+
+The mean and median remain unchanged as a result of my method of imputation. This is due to the fact that all missing values corresponded to days without any observations.  In effect, I added a handful of new data points at the mean, which had no effect on the result of either calculation.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+First I create a new factor variable called *daytype* which identifies date values as either weekday or weekend days.  I then calculate mean daily step counts for each interval and day type and store the result in a new *act_pat* dataset.
+
+```{r, echo=TRUE}
+activity$daytype <- factor(ifelse(weekdays(activity$date, abbreviate=TRUE) %in% c("Sat","Sun"), 1, 2), labels=c("weekend", "weekday"))
+table(activity$daytype)
+act_pat <- activity %>%
+           group_by(daytype, interval) %>%
+           summarize(meansteps=mean(steps,na.rm=TRUE))
+head(act_pat)
+```
+
+Now I use the new variable to construct a panel plot enabling comparison of weekend and weekday average daily step patterns.
+
+```{r, echo=TRUE}
+ggplot(data=act_pat, aes(x=interval, y=meansteps)) +
+  geom_line(color="green") +
+  facet_grid(daytype~.) + 
+  xlab("Interval") +
+  ylab("Number of Steps") +
+  theme_grey()
+```
+
+Certain differences are evident between weekend days and weekdays.  The peak at interval **835** appears in the weekday series but does not appear on weekends.  Weekend activity begins and ends later and tends to remain at a higher sustained level throughout the active portion of the day.
